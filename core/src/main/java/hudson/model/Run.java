@@ -640,7 +640,7 @@ public abstract class Run <JobT extends Job<JobT,RunT>,RunT extends Run<JobT,Run
     }
 
     /**
-     * Same as {@link #getTimestamp()} but in a different type, that is since the time of the epoch.
+     * Same as {@link #getTimestamp()} but in a different type, that is since the time of the epoc.
      */
     public final long getTimeInMillis() {
         return timestamp;
@@ -954,10 +954,7 @@ public abstract class Run <JobT extends Job<JobT,RunT>,RunT extends Run<JobT,Run
      */  
     public @Nonnull List<RunT> getPreviousBuildsOverThreshold(int numberOfBuilds, @Nonnull Result threshold) {
         RunT r = getPreviousBuild();
-        if (r != null) {
-            return r.getBuildsOverThreshold(numberOfBuilds, threshold);
-        }
-        return new ArrayList<>(numberOfBuilds);
+        return r.getBuildsOverThreshold(numberOfBuilds, threshold);
     }
 
     /**
@@ -2499,7 +2496,9 @@ public abstract class Run <JobT extends Job<JobT,RunT>,RunT extends Run<JobT,Run
         public int compare(@Nonnull Run lhs, @Nonnull Run rhs) {
             long lt = lhs.getTimeInMillis();
             long rt = rhs.getTimeInMillis();
-            return Long.compare(rt, lt);
+            if(lt>rt)   return -1;
+            if(lt<rt)   return 1;
+            return 0;
         }
     };
 
@@ -2613,7 +2612,7 @@ public abstract class Run <JobT extends Job<JobT,RunT>,RunT extends Run<JobT,Run
     public static class RedirectUp {
         public void doDynamic(StaplerResponse rsp) throws IOException {
             // Compromise to handle both browsers (auto-redirect) and programmatic access
-            // (want accurate 404 response).. send 404 with javascript to redirect browsers.
+            // (want accurate 404 response).. send 404 with javscript to redirect browsers.
             rsp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             rsp.setContentType("text/html;charset=UTF-8");
             PrintWriter out = rsp.getWriter();

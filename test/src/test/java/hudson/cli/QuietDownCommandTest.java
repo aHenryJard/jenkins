@@ -32,6 +32,7 @@ import jenkins.model.Jenkins;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.concurrent.Callable;
@@ -78,6 +79,16 @@ public class QuietDownCommandTest {
         assertThat(result, failedWith(6));
         assertThat(result, hasNoStandardOutput());
         assertThat(result.stderr(), containsString("ERROR: user is missing the Overall/Administer permission"));
+    }
+
+    @Issue("JENKINS-60266")
+    @Test
+    public void quietDownShouldSuccessWithManagePermission() throws Exception {
+        final CLICommandInvoker.Result result = command
+                .authorizedTo(Jenkins.READ, Jenkins.MANAGE)
+                .invoke();
+        assertThat(result, succeededSilently());
+        assertJenkinsInQuietMode();
     }
 
     @Test

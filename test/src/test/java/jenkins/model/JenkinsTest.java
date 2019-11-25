@@ -41,6 +41,7 @@ import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.WebResponse;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
+import hudson.cli.CLICommandInvoker;
 import hudson.model.Computer;
 import hudson.model.Failure;
 import hudson.model.InvisibleAction;
@@ -86,6 +87,8 @@ import java.util.Set;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
 import javax.annotation.CheckForNull;
+
+import static hudson.cli.CLICommandInvoker.Matcher.succeededSilently;
 
 /**
  * Tests of the {@link Jenkins} class instance logic.
@@ -383,7 +386,7 @@ public class JenkinsTest {
         }
 
         public HttpResponse doDynamic() {
-            assertEquals("anonymous", Jenkins.get().getAuthentication().getName());
+            assertTrue(Jenkins.get().getAuthentication().getName().equals("anonymous"));
             count++;
             return HttpResponses.html("OK");
         }
@@ -411,7 +414,7 @@ public class JenkinsTest {
         j.jenkins.setAuthorizationStrategy(auth);
 
         // no anonymous read access
-        assertFalse(Jenkins.get().hasPermission(Jenkins.ANONYMOUS, Jenkins.READ));
+        assertTrue(!Jenkins.get().hasPermission(Jenkins.ANONYMOUS, Jenkins.READ));
 
         WebClient wc = j.createWebClient()
                 .withThrowExceptionOnFailingStatusCode(false);
@@ -702,5 +705,23 @@ public class JenkinsTest {
     @WithPlugin("jenkins-47406.hpi") // Sources: https://github.com/Vlatombe/jenkins-47406
     public void jobCreatedByInitializerIsRetained() {
         assertNotNull("JENKINS-47406 should exist", j.jenkins.getItem("JENKINS-47406"));
+    }
+
+    @Issue("JENKINS-60266")
+    @Test
+    public void doExitSuccessWithManagePermission() {
+        CLICommandInvoker.Result result = new CLICommandInvoker(j, "shutdown")
+                .authorizedTo(Jenkins.READ, Jenkins.MANAGE)
+                .invoke();
+        assertThat(result, succeededSilently());
+    }
+
+    @Issue("JENKINS-60266")
+    @Test
+    public void doSafeExitSuccessWithManagePermission() {
+        CLICommandInvoker.Result result = new CLICommandInvoker(j, "safe-shutdown")
+                .authorizedTo(Jenkins.READ, Jenkins.MANAGE)
+                .invoke();
+        assertThat(result, succeededSilently());
     }
 }

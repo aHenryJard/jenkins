@@ -59,7 +59,7 @@ import hudson.util.NamingThreadFactory;
 import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
 
-import java.io.BufferedInputStream;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileFilter;
@@ -758,10 +758,10 @@ public final class FilePath implements SerializableOnlyOverRemoting {
     public enum TarCompression {
         NONE {
             public InputStream extract(InputStream in) {
-                return new BufferedInputStream(in);
+                return in;
             }
             public OutputStream compress(OutputStream out) {
-                return new BufferedOutputStream(out);
+                return out;
             }
         },
         GZIP {
@@ -1520,7 +1520,7 @@ public final class FilePath implements SerializableOnlyOverRemoting {
                     tempPath = Files.createTempDirectory(Util.fileToPath(dir), name,
                             PosixFilePermissions.asFileAttribute(EnumSet.allOf(PosixFilePermission.class)));
                 } else {
-                    tempPath = Files.createTempDirectory(Util.fileToPath(dir), name);
+                    tempPath = Files.createTempDirectory(Util.fileToPath(dir), name, new FileAttribute<?>[] {});
                 }
 
                 if (tempPath.toFile() == null) {
@@ -2754,7 +2754,7 @@ public final class FilePath implements SerializableOnlyOverRemoting {
                                     int idx = findSeparator(f);
                                     if(idx==-1)     break;
 
-                                    prefix.append(f, 0, idx).append('/');
+                                    prefix.append(f.substring(0, idx)).append('/');
                                     f=f.substring(idx+1);
                                     if(hasMatch(dir,prefix+fileMask,caseSensitive))
                                         return Messages.FilePath_validateAntFileMask_doesntMatchAndSuggest(fileMask, prefix+fileMask);
@@ -2971,7 +2971,7 @@ public final class FilePath implements SerializableOnlyOverRemoting {
     private static void checkPermissionForValidate() {
         AccessControlled subject = Stapler.getCurrentRequest().findAncestorObject(AbstractProject.class);
         if (subject == null)
-            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            Jenkins.get().checkPermission(Jenkins.MANAGE);
         else
             subject.checkPermission(Item.CONFIGURE);
     }

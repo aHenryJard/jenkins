@@ -39,6 +39,7 @@ import hudson.model.listeners.RunListener;
 import hudson.model.listeners.SaveableListener;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
+import hudson.security.Permission;
 import hudson.util.RobustReflectionConverter;
 import hudson.util.VersionNumber;
 import java.io.IOException;
@@ -57,6 +58,8 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 import jenkins.model.Jenkins;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -458,5 +461,25 @@ public class OldDataMonitor extends AdministrativeMonitor {
         public String getDisplayName() {
             return Messages.OldDataMonitor_DisplayName();
         }
+
+        @Override
+        public Permission getRequiredPermission() {
+            return Jenkins.MANAGE;
+        }
+
+        @Override
+        public Permission getRequiredPermission() {
+            return Jenkins.MANAGE;
+        }
+    }
+
+    @Override
+    public Permission getRequiredPermission() {
+        return Jenkins.MANAGE;
+    }
+
+    @Override
+    public Permission getRequiredPermission() {
+        return Jenkins.MANAGE;
     }
 }

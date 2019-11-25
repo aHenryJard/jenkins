@@ -31,6 +31,8 @@ import hudson.model.Node;
 import hudson.model.User;
 import hudson.tasks.Mailer;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
+
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -65,6 +67,16 @@ public class ReloadConfigurationCommandTest {
         cmd.setTransportAuth(User.get("user").impersonate()); // TODO https://github.com/jenkinsci/jenkins-test-harness/pull/53 use CLICommandInvoker.asUser
         command = new CLICommandInvoker(j, cmd);
         j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().grant(Jenkins.ADMINISTER).everywhere().toAuthenticated());
+    }
+
+    @Test
+    public void reloadConfigurationShouldFailWithoutAdministerOrManagePermission() throws Exception {
+        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().grant(Jenkins.READ).everywhere().toAuthenticated());
+        final CLICommandInvoker.Result result = command.invoke();
+
+        assertThat(result, failedWith(6));
+        assertThat(result, hasNoStandardOutput());
+        assertThat(result.stderr(), containsString("user is missing the Overall/Administer permission"));
     }
 
     @Test
@@ -161,7 +173,7 @@ public class ReloadConfigurationCommandTest {
     @Ignore // Until fixed JENKINS-8217
     @Test
     public void reloadDescriptorConfig() throws Exception {
-        Mailer.DescriptorImpl desc = j.jenkins.getExtensionList(Mailer.DescriptorImpl.class).get(0);
+        Mailer.DescriptorImpl desc = j.jenkins.getExtensionList(Mailer.DescriptorImpl.class).get(0);;
         desc.setDefaultSuffix("@oldSuffix");
         desc.save();
 

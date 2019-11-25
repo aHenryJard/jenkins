@@ -35,7 +35,7 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 import javax.servlet.ServletException;
 import javax.servlet.ServletContext;
 
-import static hudson.init.InitMilestone.JOB_CONFIG_ADAPTED;
+import static hudson.init.InitMilestone.JOB_LOADED;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import java.io.File;
 import java.io.IOException;
@@ -133,9 +133,7 @@ public class DoubleLaunchChecker {
         String contextPath="";
         try {
             Method m = ServletContext.class.getMethod("getContextPath");
-            contextPath = " contextPath=\"" + m.invoke(h.servletContext) + "\"";
-        } catch (RuntimeException e) {
-            throw e;
+            contextPath=" contextPath=\""+m.invoke(h.servletContext)+"\"";
         } catch (Exception e) {
             // maybe running with Servlet 2.4
         }
@@ -162,7 +160,7 @@ public class DoubleLaunchChecker {
             }, (random.nextInt(30) + 60) * MINUTE, TimeUnit.MILLISECONDS);
     }
 
-    @Initializer(after= JOB_CONFIG_ADAPTED)
+    @Initializer(after= JOB_LOADED)
     public static void init() {
         new DoubleLaunchChecker().schedule();
     }

@@ -182,6 +182,8 @@ import hudson.views.MyViewsTabBar;
 import hudson.views.ViewsTabBar;
 import hudson.widgets.Widget;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Objects;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
@@ -224,6 +226,7 @@ import org.jvnet.hudson.reactor.Task;
 import org.jvnet.hudson.reactor.TaskBuilder;
 import org.jvnet.hudson.reactor.TaskGraphBuilder;
 import org.jvnet.hudson.reactor.TaskGraphBuilder.Handle;
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.args4j.Argument;
@@ -304,7 +307,6 @@ import hudson.util.LogTaskListener;
 import static java.util.logging.Level.*;
 import javax.annotation.Nonnegative;
 import static javax.servlet.http.HttpServletResponse.*;
-import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.stapler.WebMethod;
 
 /**
@@ -1912,6 +1914,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      }
 
     public void setPrimaryView(@Nonnull View v) {
+        checkPermission(Jenkins.ADMINISTER);
         this.primaryView = v.getViewName();
     }
 
@@ -2203,14 +2206,18 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      * @since 2.64
      */
     public List<AdministrativeMonitor> getActiveAdministrativeMonitors() {
-        return administrativeMonitors.stream().filter(m -> {
-            try {
-                return m.isEnabled() && m.isActivated();
-            } catch (Throwable x) {
-                LOGGER.log(Level.WARNING, null, x);
-                return false;
-            }
-        }).collect(Collectors.toList());
+        if (Jenkins.get().hasPermission(ADMINISTER)){
+            return administrativeMonitors.stream().filter(m -> {
+                try {
+                    return m.isEnabled() && m.isActivated();
+                } catch (Throwable x) {
+                    LOGGER.log(Level.WARNING, null, x);
+                    return false;
+                }
+            }).collect(Collectors.toList());
+        } else {
+            return Collections.EMPTY_LIST;
+        }
     }
 
     public NodeDescriptor getDescriptor() {
@@ -2274,7 +2281,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     @Override
     public SearchIndexBuilder makeSearchIndex() {
         SearchIndexBuilder builder = super.makeSearchIndex();
-        if (hasPermission(ADMINISTER)) {
+        if (hasPermission(MANAGE)) {
                 builder.add("configure", "config", "configure")
                     .add("manage")
                     .add("log");
@@ -2339,15 +2346,6 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
         if(req!=null)
             return getRootUrlFromRequest();
         return null;
-    }
-
-    /** Exported alias for {@link JenkinsLocationConfiguration#getUrl}. */
-    @Exported(name="url")
-    @Restricted(DoNotUse.class)
-    @CheckForNull
-    public String getConfiguredRootUrl() {
-        JenkinsLocationConfiguration config = JenkinsLocationConfiguration.get();
-        return config != null ? config.getUrl() : null;
     }
 
     /**
@@ -3208,7 +3206,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
         final Set<String> loadedNames = Collections.synchronizedSet(new HashSet<>());
 
         TaskGraphBuilder g = new TaskGraphBuilder();
-        Handle loadJenkins = g.requires(EXTENSIONS_AUGMENTED).attains(SYSTEM_CONFIG_LOADED).add("Loading global config", new Executable() {
+        Handle loadJenkins = g.requires(EXTENSIONS_AUGMENTED).attains(JOB_LOADED).add("Loading global config", new Executable() {
             public void run(Reactor session) throws Exception {
                 loadConfig();
                 // if we are loading old data that doesn't have this field
@@ -3253,7 +3251,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
             }
         });
 
-        g.requires(JOB_CONFIG_ADAPTED).attains(COMPLETED).add("Finalizing set up",new Executable() {
+        g.requires(JOB_LOADED).attains(COMPLETED).add("Finalizing set up",new Executable() {
             public void run(Reactor session) throws Exception {
                 rebuildDependencyGraph();
 
@@ -3703,7 +3701,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     }
 
     private void _cleanUpShutdownThreadPoolForLoad(List<Throwable> errors) {
-        LOGGER.log(FINE, "Shutting down Jenkins load thread pool");
+        LOGGER.log(FINE, "Shuting down Jenkins load thread pool");
         try {
             threadPoolForLoad.shutdown();
         } catch (SecurityException e) {
@@ -3808,7 +3806,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     public synchronized void doConfigSubmit( StaplerRequest req, StaplerResponse rsp ) throws IOException, ServletException, FormException {
         BulkChange bc = new BulkChange(this);
         try {
-            checkPermission(ADMINISTER);
+            checkPermission(MANAGE);
 
             JSONObject json = req.getSubmittedForm();
 
@@ -3904,7 +3902,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     @RequirePOST
     public HttpRedirect doQuietDown(@QueryParameter boolean block, @QueryParameter int timeout) throws InterruptedException, IOException {
         synchronized (this) {
-            checkPermission(ADMINISTER);
+            checkPermission(MANAGE);
             isQuietingDown = true;
         }
         if (block) {
@@ -3924,7 +3922,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      */
     @RequirePOST // TODO the cancel link needs to be updated accordingly
     public synchronized HttpRedirect doCancelQuietDown() {
-        checkPermission(ADMINISTER);
+        checkPermission(MANAGE);
         isQuietingDown = false;
         getQueue().scheduleMaintenance();
         return new HttpRedirect(".");
@@ -4131,7 +4129,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      */
     @RequirePOST
     public synchronized HttpResponse doReload() throws IOException {
-        checkPermission(ADMINISTER);
+        checkPermission(MANAGE);
         LOGGER.log(Level.WARNING, "Reloading Jenkins as requested by {0}", getAuthentication().getName());
 
         // engage "loading ..." UI and then run the actual task in a separate thread
@@ -4270,7 +4268,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      */
     @CLIMethod(name="restart")
     public void doRestart(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, RestartNotSupportedException {
-        checkPermission(ADMINISTER);
+        checkPermission(MANAGE);
         if (req != null && req.getMethod().equals("GET")) {
             req.getView(this,"_restart.jelly").forward(req,rsp);
             return;
@@ -4294,7 +4292,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      */
     @CLIMethod(name="safe-restart")
     public HttpResponse doSafeRestart(StaplerRequest req) throws IOException, ServletException, RestartNotSupportedException {
-        checkPermission(ADMINISTER);
+        checkPermission(MANAGE);
         if (req != null && req.getMethod().equals("GET"))
             return HttpResponses.forwardToView(this,"_safeRestart.jelly");
 
@@ -4409,7 +4407,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     @CLIMethod(name="shutdown")
     @RequirePOST
     public void doExit( StaplerRequest req, StaplerResponse rsp ) throws IOException {
-        checkPermission(ADMINISTER);
+        checkPermission(MANAGE);
         if (rsp!=null) {
             rsp.setStatus(HttpServletResponse.SC_OK);
             rsp.setContentType("text/plain");
@@ -4442,7 +4440,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     @CLIMethod(name="safe-shutdown")
     @RequirePOST
     public HttpResponse doSafeExit(StaplerRequest req) throws IOException {
-        checkPermission(ADMINISTER);
+        checkPermission(MANAGE);
         isQuietingDown = true;
         final String exitUser = getAuthentication().getName();
         final String exitAddr = req!=null ? req.getRemoteAddr() : "unknown";
@@ -5109,8 +5107,6 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
         VERSION = ver;
         context.setAttribute("version",ver);
 
-        CHANGELOG_URL = props.getProperty("changelog.url");
-
         VERSION_HASH = Util.getDigestOf(ver).substring(0, 8);
         SESSION_HASH = Util.getDigestOf(ver+System.currentTimeMillis()).substring(0, 8);
 
@@ -5133,9 +5129,6 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      * Version number of this Jenkins.
      */
     public static String VERSION = UNCOMPUTED_VERSION;
-
-    @Restricted(NoExternalUse.class)
-    public static String CHANGELOG_URL;
 
     /**
      * Parses {@link #VERSION} into {@link VersionNumber}, or null if it's not parseable as a version number
@@ -5282,9 +5275,41 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     private static final Logger LOGGER = Logger.getLogger(Jenkins.class.getName());
 
     public static final PermissionGroup PERMISSIONS = Permission.HUDSON_PERMISSIONS;
+    /**
+     * Grants ability to configure any and all aspects of the Jenkins instance
+     */
     public static final Permission ADMINISTER = Permission.HUDSON_ADMINISTER;
+
+    /**
+     * Allows non-privilege escalating configuration permission for a Jenkins instance.  Actions which could result
+     * in a privilege  escalation (such as RUN_SCRIPTS) require explicit ADMINISTER permission.
+     *
+     * As an experimental feature, making the manage permission able to be disabled by default (keep as ADMINISTER), can
+     * be enabled with "jenkins.permission.manage.enabled" system property.
+     */
+    public static final Permission MANAGE = initializeManagePermission();
+
     public static final Permission READ = new Permission(PERMISSIONS,"Read",Messages._Hudson_ReadPermission_Description(),Permission.READ,PermissionScope.JENKINS);
     public static final Permission RUN_SCRIPTS = new Permission(PERMISSIONS, "RunScripts", Messages._Hudson_RunScriptsPermission_Description(),ADMINISTER,PermissionScope.JENKINS);
+
+    /**
+     * As an experimental feature, making the manage permission able to be disabled by default (keep as ADMINISTER), can
+     * be enabled with "jenkins.permission.manage.enabled" system property. Must be set as startup property, it
+     * cannot be changed on runtime.
+     * @return ADMINISTER when disabled (default), new permission MANAGE when enabled.
+     */
+    private static Permission initializeManagePermission() {
+        if(SystemProperties.getBoolean("jenkins.permission.manage.enabled",false)) {
+
+            return new Permission(PERMISSIONS, "Manage",
+                           Messages._Hudson_ManageJenkins_Description(),
+                           ADMINISTER,
+                           true,
+                           new PermissionScope[]{PermissionScope.JENKINS});
+        } else {
+            return ADMINISTER;
+        }
+    }
 
     /**
      * Urls that are always visible without READ permission.

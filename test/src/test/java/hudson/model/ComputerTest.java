@@ -46,6 +46,7 @@ import org.junit.experimental.categories.Category;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.SmokeTest;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -126,4 +127,16 @@ public class ComputerTest {
         assertEquals(2, c.getActions(A.class).size());
     }
 
+    @Issue("JENKINS-60266")
+    @Test
+    public void dumpExportTableAllowedWithAdminPermission() throws Exception {
+        final String ADMIN = "admin";
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
+                                                   .grant(Jenkins.ADMINISTER).everywhere().to(ADMIN));
+        Page form = j.createWebClient().login(ADMIN).goTo("computer/(master)/dumpExportTable", "text/plain");
+        assertEquals(form.getWebResponse().getStatusCode(), 200);
+    }
+        j.createWebClient().login(READER).assertFails("computer/(master)/dumpExportTable", 403);
+        j.createWebClient().login(CONFIGURATOR).assertFails("computer/(master)/dumpExportTable", 403);
 }

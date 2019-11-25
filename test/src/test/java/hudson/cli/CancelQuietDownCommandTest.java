@@ -31,6 +31,7 @@ import jenkins.model.Jenkins;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.concurrent.Future;
@@ -84,6 +85,19 @@ public class CancelQuietDownCommandTest {
         final CLICommandInvoker.Result result = command
                 .authorizedTo(Jenkins.READ, Jenkins.ADMINISTER)
                 .invoke();
+        assertThat(result, succeededSilently());
+        QuietDownCommandTest.assertJenkinsNotInQuietMode(j);
+    }
+
+    @Issue("JENKINS-60266")
+    @Test
+    public void cancelQuietDownShouldSuccessWithManagePermission() throws Exception {
+        //GIVEN a user with Jenkins.MANAGE permission
+        //WHEN cancel quiet down is called
+        final CLICommandInvoker.Result result = command
+                .authorizedTo(Jenkins.READ, Jenkins.MANAGE)
+                .invoke();
+        //THEN cancel quietDown worked
         assertThat(result, succeededSilently());
         QuietDownCommandTest.assertJenkinsNotInQuietMode(j);
     }

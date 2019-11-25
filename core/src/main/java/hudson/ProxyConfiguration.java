@@ -380,7 +380,7 @@ public final class ProxyConfiguration extends AbstractDescribableImpl<ProxyConfi
     private static ProxyConfiguration _get() {
         JenkinsJVM.checkJenkinsJVM();
         // this code could be called between the JVM flag being set and theInstance initialized
-        Jenkins jenkins = Jenkins.getInstanceOrNull();
+        Jenkins jenkins = Jenkins.get();
         return jenkins == null ? null : jenkins.proxy;
     }
 
@@ -428,7 +428,7 @@ public final class ProxyConfiguration extends AbstractDescribableImpl<ProxyConfi
                 @QueryParameter("userName") String userName, @QueryParameter("secretPassword") Secret password,
                 @QueryParameter("noProxyHost") String noProxyHost) {
 
-            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            Jenkins.get().checkPermission(Jenkins.MANAGE);
 
             if (Util.fixEmptyAndTrim(testUrl) == null) {
                 return FormValidation.error(Messages.ProxyConfiguration_TestUrlRequired());

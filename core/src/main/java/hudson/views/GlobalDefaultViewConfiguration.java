@@ -23,8 +23,10 @@
  */
 package hudson.views;
 
+import java.util.Iterator;
 import hudson.Extension;
 import hudson.model.View;
+import hudson.security.Permission;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -51,10 +53,17 @@ public class GlobalDefaultViewConfiguration extends GlobalConfiguration {
             j.setPrimaryView(newPrimaryView);
         } else {
             // Fallback if the view is not specified
-            j.setPrimaryView(j.getViews().iterator().next());
+            Iterator<View> iter = j.getViews().iterator();
+            if(iter.hasNext()) {
+                j.setPrimaryView(iter.next());
         }
         
         return true;
+    }
+
+    @Override
+    public Permission getPermission() {
+        return Jenkins.MANAGE;
     }
 }
 

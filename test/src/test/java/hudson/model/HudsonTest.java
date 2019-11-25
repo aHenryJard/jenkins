@@ -213,4 +213,7 @@ public class HudsonTest {
         pv.set(j.jenkins, value);
         assertNull("invalid primaryView", j.jenkins.getView(value));
     }
+    private String getShell() {
+        Descriptor descriptorByName = j.getInstance().getDescriptorByName("hudson.tasks.Shell");
+        return ((Shell.DescriptorImpl) descriptorByName).getShell();
 }
