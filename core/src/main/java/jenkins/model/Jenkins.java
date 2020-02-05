@@ -5280,7 +5280,25 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      * Allows non-privilege escalating configuration permission for a Jenkins instance.  Actions which could result
      * in a privilege  escalation (such as RUN_SCRIPTS) require explicit ADMINISTER permission
      */
-    public static final Permission MANAGE = new Permission(PERMISSIONS, "Manage", Messages._Hudson_ConfigureJenkins_Description(),ADMINISTER, PermissionScope.JENKINS);
+    public static final Permission MANAGE = getManageOrAdministerPermission();/*new Permission(PERMISSIONS,
+                                                             "Manage", Messages._Hudson_ConfigureJenkins_Description
+                                                             (),ADMINISTER, PermissionScope.JENKINS);*/
+
+    /**
+     * As an experimental feature, making the manage permission able to be disabled by default (keep as ADMINISTER), can
+     * be enabled with "jenkins.permission.manage.enabled" system property.
+     * @return ADMINISTER when disabled (default), new permission MANAGE when enabled.
+     */
+    private static Permission getManageOrAdministerPermission() {
+        if(SystemProperties.getBoolean("jenkins.permission.manage.enabled",false)) {
+            return new Permission(PERMISSIONS,
+                                  "Manage", Messages._Hudson_ConfigureJenkins_Description
+                    (),ADMINISTER, PermissionScope.JENKINS);
+        } else {
+            return ADMINISTER;
+        }
+    }
+
     public static final Permission READ = new Permission(PERMISSIONS,"Read",Messages._Hudson_ReadPermission_Description(),Permission.READ,PermissionScope.JENKINS);
     public static final Permission RUN_SCRIPTS = new Permission(PERMISSIONS, "RunScripts", Messages._Hudson_RunScriptsPermission_Description(),ADMINISTER,PermissionScope.JENKINS);
 
