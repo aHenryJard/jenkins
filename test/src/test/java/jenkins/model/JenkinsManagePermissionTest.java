@@ -130,4 +130,24 @@ public class JenkinsManagePermissionTest {
 
     // End of Moved from DisablePluginCommandTest
     //-------
+
+    // -----------------------------
+    //Moved from ComputerTest
+    @Issue("JENKINS-60266")
+    @Test
+    public void dumpExportTableForbiddenWithoutAdminPermission() throws Exception {
+        final String READER = "reader";
+        final String MANAGER = "manager";
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
+                                                   .grant(Jenkins.READ).everywhere().to(READER)
+                                                   .grant(Jenkins.MANAGE).everywhere().to(MANAGER)
+                                                   .grant(Jenkins.READ).everywhere().to(MANAGER)
+        );
+        j.createWebClient().login(READER).assertFails("computer/(master)/dumpExportTable", 403);
+        j.createWebClient().login(MANAGER).assertFails("computer/(master)/dumpExportTable", 403);
+    }
+
+    // End of Moved from ComputerTest
+    //-------
 }
