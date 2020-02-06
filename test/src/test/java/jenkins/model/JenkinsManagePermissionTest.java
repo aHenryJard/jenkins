@@ -36,7 +36,7 @@ public class JenkinsManagePermissionTest {
     public JenkinsRule j = new JenkinsRule();
 
     static {
-        // happens before the Jenkins static fields are loaded
+        // this happens before the Jenkins static fields are loaded
         System.setProperty("jenkins.permission.manage.enabled", "true");
     }
 
