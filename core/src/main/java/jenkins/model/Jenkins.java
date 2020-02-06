@@ -182,6 +182,8 @@ import hudson.views.MyViewsTabBar;
 import hudson.views.ViewsTabBar;
 import hudson.widgets.Widget;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Objects;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
@@ -224,6 +226,7 @@ import org.jvnet.hudson.reactor.Task;
 import org.jvnet.hudson.reactor.TaskBuilder;
 import org.jvnet.hudson.reactor.TaskGraphBuilder;
 import org.jvnet.hudson.reactor.TaskGraphBuilder.Handle;
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.args4j.Argument;
@@ -5276,23 +5279,68 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      * Grants ability to configure any and all aspects of the Jenkins instance
      */
     public static final Permission ADMINISTER = Permission.HUDSON_ADMINISTER;
-    /**
-     * Allows non-privilege escalating configuration permission for a Jenkins instance.  Actions which could result
-     * in a privilege  escalation (such as RUN_SCRIPTS) require explicit ADMINISTER permission
-     */
-    public static final Permission MANAGE = getManageOrAdministerPermission();
 
     /**
-     * As an experimental feature, making the manage permission able to be disabled by default (keep as ADMINISTER), can
-     * be enabled with "jenkins.permission.manage.enabled" system property.
-     * @return ADMINISTER when disabled (default), new permission MANAGE when enabled.
+     * Use {@link Jenkins#MANAGE} instead.
+     * Internal reference to the actual {@link Jenkins#MANAGE} permission, still experimental, to allow switching its
+     * value depending if the feature has been enabled or disabled.
      */
-    private static Permission getManageOrAdministerPermission() {
-        if(Boolean.getBoolean("jenkins.permission.manage.enabled")) {
-            return new Permission(PERMISSIONS,"Manage", Messages._Hudson_ConfigureJenkins_Description(),ADMINISTER, PermissionScope.JENKINS);
+    private static final Permission EXPERIMENTAL_MANAGE = new Permission(PERMISSIONS,"Manage",
+                                                            Messages._Hudson_ConfigureJenkins_Description(),
+                                                                         ADMINISTER, PermissionScope.JENKINS);
+    /**
+     * Allows non-privilege escalating configuration permission for a Jenkins instance.  Actions which could result
+     * in a privilege  escalation (such as RUN_SCRIPTS) require explicit ADMINISTER permission.
+     *
+     * As an experimental feature, making the manage permission able to be disabled by default (keep as ADMINISTER), can
+     * be enabled with "jenkins.permission.manage.enabled" system property or with
+     * {@link Jenkins#enableExperimentalManagePermission(boolean)} in the System Groovy Console.
+     */
+    public static final Permission MANAGE = getManageOrAdministerPermission(Boolean.getBoolean("jenkins.permission.manage.enabled"));
+
+
+    /**
+     * Returns the MANAGE Permission instance appropriate depending if its experimental feature is enabled or not
+     * Suitable to be used view System Groovy Scripts to change the feature.
+     * @param manageExperimentalPermissionEnabled {@code true} if the experimental feature is being enabled
+     * @return {@code ADMINISTER} when {@code manageExperimentalPermissionEnabled} false, new permission
+     * {@code MANAGE} otherwise.
+     */
+    @SuppressFBWarnings(value = "UPM_UNCALLED_PRIVATE_METHOD", justification = "Accessible via System Groovy Scripts")
+    @Restricted(NoExternalUse.class)
+    public static Permission getManageOrAdministerPermission(boolean manageExperimentalPermissionEnabled) {
+        if (manageExperimentalPermissionEnabled) {
+            EXPERIMENTAL_MANAGE.setEnabled(true);
+            return EXPERIMENTAL_MANAGE;
         } else {
             return ADMINISTER;
         }
+    }
+
+    /**
+     * Enables or disables the experimental feature Manage permission.
+     * When disabled, the {@link Jenkins#MANAGE} permission will be same as {@link Jenkins#ADMINISTER}.
+     * Suitable to be used view System Groovy Scripts to change the feature, or in testing
+     * @param enable true to enable the experimental feature, false to disable it
+     */
+    @Restricted(NoExternalUse.class)
+    public static void enableExperimentalManagePermission(boolean enable) throws NoSuchFieldException, IllegalAccessException{
+            Permission managePermission = getManageOrAdministerPermission(enable);
+
+            if(MANAGE != managePermission) {
+                Field field = Jenkins.class.getDeclaredField("MANAGE");
+                field.setAccessible(true);
+
+                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                modifiersField.setAccessible(true);
+                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+                field.set(null, managePermission);
+            }
+    }
+
+    public static Localizable description(boolean enabled){
+        return enabled ?  Messages._Hudson_ConfigureJenkins_Description() : null;
     }
 
     public static final Permission READ = new Permission(PERMISSIONS,"Read",Messages._Hudson_ReadPermission_Description(),Permission.READ,PermissionScope.JENKINS);
