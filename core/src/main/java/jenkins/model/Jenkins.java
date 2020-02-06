@@ -5302,9 +5302,9 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
         if(SystemProperties.getBoolean("jenkins.permission.manage.enabled",false)) {
 
             return new Permission(PERMISSIONS, "Manage",
-                           Messages._Hudson_ConfigureJenkins_Description(),
+                           Messages._Hudson_ManageJenkins_Description(),
                            ADMINISTER,
-                           Boolean.getBoolean("jenkins.permission.manage.enabled"),
+                           true,
                            new PermissionScope[]{PermissionScope.JENKINS});
         } else {
             return ADMINISTER;
