@@ -32,19 +32,15 @@ import hudson.model.User;
 import hudson.tasks.Mailer;
 import jenkins.model.Jenkins;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 import static hudson.cli.CLICommandInvoker.Matcher.failedWith;
 import static hudson.cli.CLICommandInvoker.Matcher.hasNoStandardOutput;
@@ -72,15 +68,8 @@ public class ReloadConfigurationCommandTest {
         j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().grant(Jenkins.ADMINISTER).everywhere().toAuthenticated());
     }
 
-    @After
-    public void tearDown() throws Exception{
-        //Make sure the experimental flag is being cleaned between tests
-        Jenkins.enableExperimentalManagePermission(false);
-    }
-
     @Test
     public void reloadConfigurationShouldFailWithoutAdministerOrManagePermission() throws Exception {
-        Jenkins.enableExperimentalManagePermission(true);
         j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().grant(Jenkins.READ).everywhere().toAuthenticated());
         final CLICommandInvoker.Result result = command.invoke();
 
@@ -97,25 +86,6 @@ public class ReloadConfigurationCommandTest {
         assertThat(result, failedWith(6));
         assertThat(result, hasNoStandardOutput());
         assertThat(result.stderr(), containsString("user is missing the Overall/Administer permission"));
-    }
-
-    @Issue("JENKINS-60266")
-    @Test
-    public void reloadConfigurationShouldWorkWithManagePermission() throws Exception {
-        Jenkins.enableExperimentalManagePermission(true);
-        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
-                                                   .grant(Jenkins.MANAGE, Jenkins.READ).everywhere().toAuthenticated());
-        //Any reload configuration should work with Jenkins.MANAGE as well
-        this.reloadMasterConfig();
-    }
-
-    @Issue("JENKINS-60266")
-    @Test
-    public void reloadConfigurationShouldWorkWithAdministerPermission() throws Exception {
-        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
-                                                   .grant(Jenkins.ADMINISTER, Jenkins.READ).everywhere().toAuthenticated());
-        //Any reload configuration should work with Jenkins.MANAGE as well
-        this.reloadMasterConfig();
     }
 
     @Test
