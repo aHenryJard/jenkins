@@ -1,8 +1,5 @@
 <div>
-  Ceci contrôle le nombre de builds simultanés que Jenkins peut exécuter.
-  Cette valeur impacte donc la charge générale du système.
-  Une bonne valeur pour commencer serait le nombre de processeurs sur
-  votre système.
+  Le nombre maximum de build concurrent que Jenkins peut réaliser sur ce noeud.
 
   <p>
   Un nombre de builds simultanés supérieur à cette valeur augmentera la
@@ -11,6 +8,12 @@
   pendant qu'un autre build est en attente sur les entrées/sorties.
 
   <p>
-  En mode contrôleur/agent, une valeur de 0 garantit que le contrôleur ne déclenchera pas
-  pas de build.
+    Les agents (noeuds qui ne sont pas sur le contrôleur) doivent avoir au moins un exécuteur.
+    Pour stopper temporairement les contructions sur un agent, utilisez le bouton
+    <i>Marquer ce noeud comme temporairement hors ligne</i> sur la page de l'agent.
+  <p>
+
+  <p>
+    Pour le contrôleur (dont le noeud est appelé 'built-in'), une valeur de 0 garantit que le contrôleur ne déclenchera pas de build.
+  <i>Note:<i> le contrôleur pourra toujours lancer des tâches légères ('flyweight task') y compris les tâches de haut niveau des pipelines.
 </div>
